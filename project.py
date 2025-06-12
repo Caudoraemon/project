@@ -2,22 +2,29 @@ import urllib.request
 import urllib.parse
 import json
 import google.generativeai as genai
+from pathlib import Path
 
 # 네이버 API 정보 입력
-client_id = "Naver ID"
-client_secret = "Naver API"
+client_id = "BDqJGBPjsHXqekmaVY4e"
+client_secret = "cS1s_5MfZC"
 
 # Gemini API 키 입력
-GEMINI_API_KEY = "api_key=GEMINI_API_KEY"
+GEMINI_API_KEY = "AIzaSyD5KJKDx_0L8rx80k4sULj4TvB6Lg6ZO5Y"
 
+# 뉴스 검색 함수
 def get_news(query):
+    # 입력 키워드를 URL 인코딩
     encText = urllib.parse.quote(query)
+    # 뉴스 검색 URL 구성
     url = f"https://openapi.naver.com/v1/search/news.json?query={encText}&display=1&sort=sim"
+    # 요청 객체 생성, 헤더 설정
     request = urllib.request.Request(url)
     request.add_header("X-Naver-Client-Id", client_id)
     request.add_header("X-Naver-Client-Secret", client_secret)
+    # 인증 우회 SSL 설정
     import ssl
     ssl_context = ssl._create_unverified_context()
+    # API 요청 및 응답 처리
     response = urllib.request.urlopen(request, context=ssl_context)
     rescode = response.getcode()
     if rescode == 200:
@@ -32,9 +39,11 @@ def get_news(query):
         print("Error Code:" + str(rescode))
         return None
 
+# 뉴스 설명 추출 함수
 def get_article_text(news_item):
     return news_item['description']
 
+# 수준별 요약 생성 함수
 def summarize_by_level_with_gemini(level, text):
     genai.configure(api_key=GEMINI_API_KEY)
     model = genai.GenerativeModel("gemini-1.5-flash")
@@ -54,6 +63,7 @@ def summarize_by_level_with_gemini(level, text):
     response = model.generate_content(prompt)
     return response.text.strip()
 
+# 퀴즈 생성 함수
 def make_quiz_with_gemini(text):
     genai.configure(api_key=GEMINI_API_KEY)
     model = genai.GenerativeModel("gemini-1.5-flash")
@@ -76,6 +86,7 @@ def make_quiz_with_gemini(text):
     response = model.generate_content(prompt)
     return response.text.strip()
 
+# JSON 문자열 정리 함수
 def clean_json_string(json_str):
     json_str = json_str.strip()
     if json_str.startswith("```json"):
@@ -86,6 +97,7 @@ def clean_json_string(json_str):
         json_str = json_str[:-3].strip()
     return json_str
 
+# 퀴즈 실행 함수
 def run_quiz(quiz_json_str):
     quiz_json_str = clean_json_string(quiz_json_str)
     try:
@@ -121,17 +133,35 @@ def run_quiz(quiz_json_str):
             
     print(f"\n총 {len(quiz_list)}문제 중 {score}문제 맞췄습니다.")
 
+# 메인 실행
 if __name__ == "__main__":
-    query = input("검색할 뉴스 키워드를 입력하세요: ")
+    query = input("검색할 뉴스 키워드를 입력하세요 (exit 입력 시 종료): ").strip()
+    if query.lower() == 'exit':
+        print("프로그램을 종료합니다.")
+        exit()
+
     news_item = get_news(query)
     if news_item:
         article_text = get_article_text(news_item)
+
+        # 뉴스 제목, 링크 출력
+        print("\n[뉴스 제목]")
+        print(news_item['title'])
+        print("\n[뉴스 링크]")
+        print(news_item['link'])
         print("\n[기사 요약문]\n", article_text)
 
         # 사용자로부터 설명 수준 입력받기
         level = input("어떤 수준으로 설명해드릴까요? (초등학생 / 중학생 / 대학생): ").strip()
         level_summary = summarize_by_level_with_gemini(level, article_text)
         print(f"\n[{level} 수준 설명]\n{level_summary}")
+
+        # 요약 텍스트 저장
+        output_dir = Path("summary_outputs")
+        output_dir.mkdir(exist_ok=True)
+        summary_file = output_dir / f"{query}_{level}.txt"
+        summary_file.write_text(level_summary, encoding="utf-8")
+        print(f"[요약 저장 완료] {summary_file}에 저장되었습니다.")
 
         # 퀴즈 실행
         quiz_json_str = make_quiz_with_gemini(article_text)
