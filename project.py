@@ -63,6 +63,19 @@ def summarize_by_level_with_gemini(level, text):
     response = model.generate_content(prompt)
     return response.text.strip()
 
+# 어려운 단어 해설 함수
+def explain_difficult_words(text, level="초등학생"):
+    genai.configure(api_key=GEMINI_API_KEY)
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    prompt = (
+        f"다음 기사 요약에서 {level}이 어려워할 만한 단어 5개를 골라서, "
+        f"각 단어에 대해 뜻과 간단한 설명을 제공해줘. 아래와 같은 형식으로:\n\n"
+        f"[단어] - [뜻과 간단한 풀이]\n\n"
+        f"기사:\n{text}"
+    )
+    response = model.generate_content(prompt)
+    return response.text.strip()
+
 # 퀴즈 생성 함수
 def make_quiz_with_gemini(text):
     genai.configure(api_key=GEMINI_API_KEY)
@@ -98,7 +111,7 @@ def clean_json_string(json_str):
     return json_str
 
 # 퀴즈 실행 함수
-def run_quiz(quiz_json_str):
+def run_quiz(quiz_json_str, query=None):
     quiz_json_str = clean_json_string(quiz_json_str)
     try:
         quiz_list = json.loads(quiz_json_str)
@@ -108,17 +121,22 @@ def run_quiz(quiz_json_str):
         return
 
     score = 0
+    user_answers = []
+
     for idx, quiz in enumerate(quiz_list, 1):
         print(f"\n문제 {idx}: {quiz['question']}")
         for i, opt in enumerate(quiz['options']):
             print(f"{chr(65+i)}) {opt}")
         user_ans = input("정답을 입력하세요 (A/B/C/D): ").strip().upper()
+        user_answers.append(user_ans)
+
         try:
             ans_idx = [opt.strip() for opt in quiz['options']].index(quiz['answer'].strip())
             correct = chr(65 + ans_idx)  # 정답의 보기 번호 (A/B/C/D)
         except ValueError:
             print("정답 보기 매칭 오류")
             continue
+
         if user_ans == correct:
             print("정답입니다!\n")
             score += 1
@@ -132,6 +150,23 @@ def run_quiz(quiz_json_str):
             print(f"해설 정보가 없습니다.\n")
             
     print(f"\n총 {len(quiz_list)}문제 중 {score}문제 맞췄습니다.")
+
+    if query:
+        save_quiz_results(query, quiz_list, user_answers, score)
+
+# 퀴즈 결과 저장 함수
+def save_quiz_results(query, quiz_list, user_answers, score):
+    quiz_result_file = Path("summary_outputs") / f"{query}_quiz_result.txt"
+    with quiz_result_file.open("w", encoding="utf-8") as f:
+        for i, quiz in enumerate(quiz_list):
+            f.write(f"[문제 {i+1}]\n{quiz['question']}\n")
+            for j, opt in enumerate(quiz['options']):
+                f.write(f"  {chr(65+j)}) {opt}\n")
+            f.write(f"사용자 선택: {user_answers[i]} / 정답: {quiz['answer']}\n")
+            explanation = quiz.get("explanation", "(해설 없음)")
+            f.write(f"해설: {explanation}\n\n")
+        f.write(f"총 점수: {score} / {len(quiz_list)}\n")
+    print(f"[퀴즈 결과 저장 완료] {quiz_result_file}")
 
 # 메인 실행
 if __name__ == "__main__":
@@ -156,13 +191,23 @@ if __name__ == "__main__":
         level_summary = summarize_by_level_with_gemini(level, article_text)
         print(f"\n[{level} 수준 설명]\n{level_summary}")
 
-        # 요약 텍스트 저장
+        # 어려운 단어 설명
+        word_explanations = explain_difficult_words(article_text, level)
+        print(f"\n[{level} 수준 단어 풀이]\n{word_explanations}")
+
+        # 텍스트 파일 저장
         output_dir = Path("summary_outputs")
         output_dir.mkdir(exist_ok=True)
-        summary_file = output_dir / f"{query}_{level}.txt"
-        summary_file.write_text(level_summary, encoding="utf-8")
-        print(f"[요약 저장 완료] {summary_file}에 저장되었습니다.")
+        full_save_file = output_dir / f"{query}_{level}_full.txt"
+        full_save_file.write_text(
+            f"[뉴스 제목]\n{news_item['title']}\n\n"
+            f"[뉴스 링크]\n{news_item['link']}\n\n"
+            f"[기사 요약문]\n{article_text}\n\n"
+            f"[{level} 수준 설명]\n{level_summary}",
+            encoding="utf-8"
+        )
+        print(f"[전체 내용 저장 완료] {full_save_file}에 저장되었습니다.")
 
         # 퀴즈 실행
         quiz_json_str = make_quiz_with_gemini(article_text)
-        run_quiz(quiz_json_str)
+        run_quiz(quiz_json_str, query=query)
