@@ -67,6 +67,7 @@ def make_quiz_with_gemini(text):
         f"    \"question\": \"문제 내용\",\n"
         f"    \"options\": [\"A\", \"B\", \"C\", \"D\"],\n"
         f"    \"answer\": \"정답(보기 내용)\"\n"
+        F"    \"explanation\": \"왜 이게 정답인지 간단히 설명해줘.\"\n"
         f"  }},\n"
         f"  ...\n"
         f"]\n\n"
@@ -111,6 +112,13 @@ def run_quiz(quiz_json_str):
             score += 1
         else:
             print(f"오답입니다. 정답은 {correct}) {quiz['answer']}입니다.\n")
+
+        explanation = quiz.get("explanation", "").strip()
+        if explanation:
+            print(f"해설: {explanation}\n")
+        else:
+            print(f"해설 정보가 없습니다.\n")
+            
     print(f"\n총 {len(quiz_list)}문제 중 {score}문제 맞췄습니다.")
 
 if __name__ == "__main__":
