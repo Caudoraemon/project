@@ -16,7 +16,9 @@ def get_news(query):
     request = urllib.request.Request(url)
     request.add_header("X-Naver-Client-Id", client_id)
     request.add_header("X-Naver-Client-Secret", client_secret)
-    response = urllib.request.urlopen(request)
+    import ssl
+    ssl_context = ssl._create_unverified_context()
+    response = urllib.request.urlopen(request, context=ssl_context)
     rescode = response.getcode()
     if rescode == 200:
         response_body = response.read()
