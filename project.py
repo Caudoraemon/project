@@ -48,7 +48,7 @@ def summarize_by_level_with_gemini(level, text):
         return f"'{level}'은 지원하지 않는 수준입니다. (초등학생, 중학생, 대학생 중 선택)"
     
     prompt = (
-        f"다음 뉴스 내용을 {level_map[level]}\n\n"
+        f"다음 뉴스 내용을 {level_map[level]}\n\n 수준으로 다시 설명해줘."
         f"뉴스 내용:\n{text}"
     )
     response = model.generate_content(prompt)
