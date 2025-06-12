@@ -35,12 +35,20 @@ def get_news(query):
 def get_article_text(news_item):
     return news_item['description']
 
-def summarize_levels_with_gemini(text):
+def summarize_by_level_with_gemini(level, text):
     genai.configure(api_key=GEMINI_API_KEY)
     model = genai.GenerativeModel("gemini-1.5-flash")
+
+    level_map = {
+        "초등학생": "초등학생이 이해할 수 있도록 아주 쉽게 설명해줘.",
+        "중학생": "중학생 수준에 맞게 간단하게 설명해줘.",
+        "대학생": "대학생 수준에 맞춰 핵심 내용을 요약해줘.",
+    }
+    if level not in level_map:
+        return f"'{level}'은 지원하지 않는 수준입니다. (초등학생, 중학생, 대학생 중 선택)"
+    
     prompt = (
-        f"다음 뉴스 내용을 간단하게 요약해줘.\n"
-        f"그리고 초등학생, 중학생, 대학생 수준으로 각각 다시 설명해줘.\n\n"
+        f"다음 뉴스 내용을 {level_map[level]}\n\n"
         f"뉴스 내용:\n{text}"
     )
     response = model.generate_content(prompt)
@@ -106,15 +114,17 @@ def run_quiz(quiz_json_str):
     print(f"\n총 {len(quiz_list)}문제 중 {score}문제 맞췄습니다.")
 
 if __name__ == "__main__":
-    query = input("검색할 뉴스를 입력하세요: ")
+    query = input("검색할 뉴스 키워드를 입력하세요: ")
     news_item = get_news(query)
     if news_item:
         article_text = get_article_text(news_item)
         print("\n[기사 요약문]\n", article_text)
 
-        # 수준별 요약 추가
-        level_summary = summarize_levels_with_gemini(article_text)
-        print("\n[수준별 요약]\n", level_summary)
+        # 사용자로부터 설명 수준 입력받기
+        level = input("어떤 수준으로 설명해드릴까요? (초등학생 / 중학생 / 대학생): ").strip()
+        level_summary = summarize_by_level_with_gemini(level, article_text)
+        print(f"\n[{level} 수준 설명]\n{level_summary}")
 
+        # 퀴즈 실행
         quiz_json_str = make_quiz_with_gemini(article_text)
         run_quiz(quiz_json_str)
