@@ -4,11 +4,11 @@ import json
 import google.generativeai as genai
 
 # 네이버 API 정보 입력
-client_id = "bU3TXXvjacAeDbXe3Aez"
-client_secret = "cOQzRU93bn"
+client_id = "Naver ID"
+client_secret = "Naver API"
 
 # Gemini API 키 입력
-GEMINI_API_KEY = "AIzaSyAktqP3pdrp34uR2u2Mdb5JcJywb3_bpf4"
+GEMINI_API_KEY = "api_key=GEMINI_API_KEY"
 
 def get_news(query):
     encText = urllib.parse.quote(query)
