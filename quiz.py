@@ -7,7 +7,7 @@ model = genai.GenerativeModel("gemini-1.5-flash")
 import google.generativeai as genai
 import re
 
-# 1. Gemini에게 퀴즈 요청하기
+# 퀴즈 요청
 def make_quiz_with_gemini(text):
     model = genai.GenerativeModel("gemini-1.5-flash")
     prompt = (
@@ -19,7 +19,7 @@ def make_quiz_with_gemini(text):
     response = model.generate_content(prompt)
     return response.text.strip()
 
-# 2. 퀴즈 텍스트 파싱하기
+# 퀴즈 만들기
 def parse_quiz_text(text):
     quiz_data = []
     pattern = r"문제\s*\d+[:：]\s*(.*?)\n1[.] (.*?)\n2[.] (.*?)\n3[.] (.*?)\n4[.] (.*?)\n정답[:：]\s*(\d)"
@@ -34,9 +34,9 @@ def parse_quiz_text(text):
         })
     return quiz_data
 
-# 3. 퀴즈 진행 함수
+# 퀴즈 진행
 def run_quiz(quiz_list):
-    print("📰 뉴스 기반 객관식 퀴즈를 시작합니다. 총 3문제입니다.\n")
+    print("뉴스 기반 객관식 퀴즈를 시작합니다. 총 3문제입니다.\n")
 
     for i, quiz in enumerate(quiz_list):
         print(f"문제 {i + 1}: {quiz['question']}")
@@ -46,7 +46,7 @@ def run_quiz(quiz_list):
         # 사용자 입력 받기
         while True:
             try:
-                user_input = int(input("👉 정답 번호 입력 (0~3): "))
+                user_input = int(input("정답 번호 입력 (0~3): "))
                 if 0 <= user_input < 4:
                     break
                 else:
@@ -56,25 +56,9 @@ def run_quiz(quiz_list):
 
         # 정답 체크
         if user_input == quiz["answer"]:
-            print("✅ 정답입니다!\n")
+            print("정답입니다!\n")
         else:
             correct_option = quiz["options"][quiz["answer"]]
-            print(f"❌ 정답은 [{quiz['answer']}. {correct_option}]입니다.\n")
+            print(f"오답입니다. 정답은 [{quiz['answer']}. {correct_option}]입니다.\n")
 
     print("퀴즈가 끝났습니다.")
-
-# -------------------------------
-# 전체 실행 흐름
-if __name__ == "__main__":
-    # 예시 뉴스 텍스트 (테스트용)
-    news_text = """
-    한국은행은 오늘 기준금리를 0.25% 인상하며, 최근 급등하는 물가 상승을 억제하기 위한 조치를 발표했다.
-    이는 지난 6개월간 처음으로 이루어진 금리 인상이며, 소비자 대출 이자에 직접적인 영향을 미칠 것으로 보인다.
-    """
-
-    quiz_text = make_quiz_with_gemini(news_text)
-    print("🔍 생성된 퀴즈 텍스트:\n")
-    print(quiz_text)  # 확인용 (실제로는 숨겨도 됨)
-
-    quiz_data = parse_quiz_text(quiz_text)
-    run_quiz(quiz_data)
