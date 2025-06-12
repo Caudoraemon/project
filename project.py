@@ -63,6 +63,19 @@ def summarize_by_level_with_gemini(level, text):
     response = model.generate_content(prompt)
     return response.text.strip()
 
+# 어려운 단어 해설 함수
+def explain_difficult_words(text, level="초등학생"):
+    genai.configure(api_key=GEMINI_API_KEY)
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    prompt = (
+        f"다음 기사 요약에서 {level}이 어려워할 만한 단어 5개를 골라서, "
+        f"각 단어에 대해 뜻과 간단한 설명을 제공해줘. 아래와 같은 형식으로:\n\n"
+        f"[단어] - [뜻과 간단한 풀이]\n\n"
+        f"기사:\n{text}"
+    )
+    response = model.generate_content(prompt)
+    return response.text.strip()
+
 # 퀴즈 생성 함수
 def make_quiz_with_gemini(text):
     genai.configure(api_key=GEMINI_API_KEY)
@@ -177,6 +190,10 @@ if __name__ == "__main__":
         level = input("어떤 수준으로 설명해드릴까요? (초등학생 / 중학생 / 대학생): ").strip()
         level_summary = summarize_by_level_with_gemini(level, article_text)
         print(f"\n[{level} 수준 설명]\n{level_summary}")
+
+        # 어려운 단어 설명
+        word_explanations = explain_difficult_words(article_text, level)
+        print(f"\n[{level} 수준 단어 풀이]\n{word_explanations}")
 
         # 텍스트 파일 저장
         output_dir = Path("summary_outputs")
