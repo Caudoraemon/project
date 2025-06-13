@@ -5,11 +5,11 @@ import google.generativeai as genai
 from pathlib import Path
 
 # 네이버 API 정보 입력
-client_id = "BDqJGBPjsHXqekmaVY4e"
-client_secret = "cS1s_5MfZC"
+client_id = "client id"
+client_secret = "client secret"
 
 # Gemini API 키 입력
-GEMINI_API_KEY = "AIzaSyD5KJKDx_0L8rx80k4sULj4TvB6Lg6ZO5Y"
+GEMINI_API_KEY = "Gemini API"
 
 # 뉴스 검색 함수
 def get_news(query):
