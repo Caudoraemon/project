@@ -229,3 +229,7 @@ if __name__ == "__main__":
         # 퀴즈 실행
         quiz_json_str = make_quiz_with_gemini(article_text)
         run_quiz(quiz_json_str, query=query)
+    else:
+        print("뉴스 정보를 가져올 수 없습니다. 다시 시도해 주세요.")
+except Exception as e:
+    print(f"전체 실행 중 오류 발생: {e}")
