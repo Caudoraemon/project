@@ -3,41 +3,46 @@ import urllib.parse
 import json
 import google.generativeai as genai
 from pathlib import Path
+import ssl
+import sys
 
-# 네이버 API 정보 입력
+# 네이버 API 정보 입력 
 client_id = "client id"
 client_secret = "client secret"
 
-# Gemini API 키 입력
+# Gemini API 키 입력 
 GEMINI_API_KEY = "Gemini API"
 
 # 뉴스 검색 함수
 def get_news(query):
-    # 입력 키워드를 URL 인코딩
-    encText = urllib.parse.quote(query)
-    # 뉴스 검색 URL 구성
-    url = f"https://openapi.naver.com/v1/search/news.json?query={encText}&display=1&sort=sim"
-    # 요청 객체 생성, 헤더 설정
-    request = urllib.request.Request(url)
-    request.add_header("X-Naver-Client-Id", client_id)
-    request.add_header("X-Naver-Client-Secret", client_secret)
-    # 인증 우회 SSL 설정
-    import ssl
-    ssl_context = ssl._create_unverified_context()
-    # API 요청 및 응답 처리
-    response = urllib.request.urlopen(request, context=ssl_context)
-    rescode = response.getcode()
-    if rescode == 200:
-        response_body = response.read()
-        news_json = json.loads(response_body)
-        if news_json["items"]:
-            return news_json["items"][0]
-        else:
-            print("검색 결과가 없습니다.")
+    try:
+        # 입력 키워드를 URL 인코딩
+        encText = urllib.parse.quote(query)
+        # 뉴스 검색 URL 구성
+        url = f"https://openapi.naver.com/v1/search/news.json?query={encText}&display=1&sort=sim"
+        # 요청 객체 생성, 헤더 설정
+        request = urllib.request.Request(url)
+        request.add_header("X-Naver-Client-Id", client_id)
+        request.add_header("X-Naver-Client-Secret", client_secret)
+        
+        # 인증 우회 SSL 설정
+        ssl_context = ssl._create_unverified_context()
+        # API 요청 및 응답 처리
+        response = urllib.request.urlopen(request, context=ssl_context)
+        rescode = response.getcode()
+        if rescode == 200:
+            response_body = response.read()
+            news_json = json.loads(response_body)
+            if news_json["items"]:
+                return news_json["items"][0]
+            else:
+                print("검색 결과가 없습니다.")
             return None
-    else:
-        print("Error Code:" + str(rescode))
-        return None
+        else:
+            print(f"Error Code: str(rescode)")
+    except Exception as e:
+        print(f"뉴스 검색 중 오류 발생: {e}")
+    return None
 
 # 뉴스 설명 추출 함수
 def get_article_text(news_item):
@@ -45,60 +50,69 @@ def get_article_text(news_item):
 
 # 수준별 요약 생성 함수
 def summarize_by_level_with_gemini(level, text):
-    genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        model = genai.GenerativeModel("gemini-1.5-flash")
 
-    level_map = {
-        "초등학생": "초등학생이 이해할 수 있도록 아주 쉽게 설명해줘.",
-        "중학생": "중학생 수준에 맞게 간단하게 설명해줘.",
-        "대학생": "대학생 수준에 맞춰 핵심 내용을 요약해줘.",
-    }
-    if level not in level_map:
-        return f"'{level}'은 지원하지 않는 수준입니다. (초등학생, 중학생, 대학생 중 선택)"
+        level_map = {
+            "초등학생": "초등학생이 이해할 수 있도록 아주 쉽게 설명해줘.",
+            "중학생": "중학생 수준에 맞게 간단하게 설명해줘.",
+            "대학생": "대학생 수준에 맞춰 핵심 내용을 요약해줘.",
+        }
+        if level not in level_map:
+            return f"'{level}'은 지원하지 않는 수준입니다. (초등학생, 중학생, 대학생 중 선택)"
     
-    prompt = (
-        f"다음 뉴스 내용을 {level_map[level]}\n\n 수준으로 다시 설명해줘."
-        f"뉴스 내용:\n{text}"
-    )
-    response = model.generate_content(prompt)
-    return response.text.strip()
+        prompt = (
+            f"다음 뉴스 내용을 {level_map[level]}\n\n 수준으로 다시 설명해줘."
+            f"뉴스 내용:\n{text}"
+        )
+        response = model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        return f"요약 중 오류 발생: {e}"
 
 # 어려운 단어 해설 함수
 def explain_difficult_words(text, level="초등학생"):
-    genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel("gemini-1.5-flash")
-    prompt = (
-        f"다음 기사 요약에서 {level}이 어려워할 만한 단어 5개를 골라서, "
-        f"각 단어에 대해 뜻과 간단한 설명을 제공해줘. 아래와 같은 형식으로:\n\n"
-        f"[단어] - [뜻과 간단한 풀이]\n\n"
-        f"기사:\n{text}"
-    )
-    response = model.generate_content(prompt)
-    return response.text.strip()
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        prompt = (
+            f"다음 기사 요약에서 {level}이 어려워할 만한 단어 5개를 골라서, "
+            f"각 단어에 대해 뜻과 간단한 설명을 제공해줘. 아래와 같은 형식으로:\n\n"
+            f"[단어] - [뜻과 간단한 풀이]\n\n"
+            f"기사:\n{text}"
+        )
+        response = model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        return f"단어 해설 중 오류 발생: {e}"
 
 # 퀴즈 생성 함수
 def make_quiz_with_gemini(text):
-    genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel("gemini-1.5-flash")
-    prompt = (
-        f"다음 뉴스 내용을 바탕으로 객관식 퀴즈 3문제를 만들어줘. "
-        f"각 문제는 4개의 선택지와 정답을 포함해야 해. "
-        f"아래와 같은 JSON 형식으로 만들어줘. "
-        f"문제와 선택지는 최대한 간결하게 작성해줘.\n\n"
-        f"[\n"
-        f"  {{\n"
-        f"    \"question\": \"문제 내용\",\n"
-        f"    \"options\": [\"A\", \"B\", \"C\", \"D\"],\n"
-        f"    \"answer\": \"정답(보기 내용)\"\n"
-        F"    \"explanation\": \"왜 이게 정답인지 간단히 설명해줘.\"\n"
-        f"  }},\n"
-        f"  ...\n"
-        f"]\n\n"
-        f"뉴스 내용:\n{text}"
-    )
-    response = model.generate_content(prompt)
-    return response.text.strip()
-
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        prompt = (
+            f"다음 뉴스 내용을 바탕으로 객관식 퀴즈 3문제를 만들어줘. "
+            f"각 문제는 4개의 선택지와 정답을 포함해야 해. "
+            f"아래와 같은 JSON 형식으로 만들어줘. "
+            f"문제와 선택지는 최대한 간결하게 작성해줘.\n\n"
+            f"[\n"
+            f"  {{\n"
+            f"    \"question\": \"문제 내용\",\n"
+            f"    \"options\": [\"A\", \"B\", \"C\", \"D\"],\n"
+            f"    \"answer\": \"정답(보기 내용)\"\n"
+            f"    \"explanation\": \"왜 이게 정답인지 간단히 설명해줘.\"\n"
+            f"  }},\n"
+            f"  ...\n"
+            f"]\n\n"
+            f"뉴스 내용:\n{text}"
+        )
+        response = model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        return f"퀴즈 생성 오류 발생: {e}"
+        
 # JSON 문자열 정리 함수
 def clean_json_string(json_str):
     json_str = json_str.strip()
@@ -116,7 +130,7 @@ def run_quiz(quiz_json_str, query=None):
     try:
         quiz_list = json.loads(quiz_json_str)
     except Exception as e:
-        print("퀴즈 데이터 파싱 오류:", e)
+        print(f"퀴즈 데이터 파싱 오류: {e}")
         print("원본 데이터:\n", quiz_json_str)
         return
 
@@ -149,24 +163,28 @@ def run_quiz(quiz_json_str, query=None):
         else:
             print(f"해설 정보가 없습니다.\n")
             
-    print(f"\n총 {len(quiz_list)}문제 중 {score}문제 맞췄습니다.")
+    print(f"\n총 {len(quiz_list)}문제 중 {score}문제 맞혔혔습니다.")
 
     if query:
         save_quiz_results(query, quiz_list, user_answers, score)
 
 # 퀴즈 결과 저장 함수
 def save_quiz_results(query, quiz_list, user_answers, score):
-    quiz_result_file = Path("summary_outputs") / f"{query}_quiz_result.txt"
-    with quiz_result_file.open("w", encoding="utf-8") as f:
-        for i, quiz in enumerate(quiz_list):
-            f.write(f"[문제 {i+1}]\n{quiz['question']}\n")
-            for j, opt in enumerate(quiz['options']):
-                f.write(f"  {chr(65+j)}) {opt}\n")
-            f.write(f"사용자 선택: {user_answers[i]} / 정답: {quiz['answer']}\n")
-            explanation = quiz.get("explanation", "(해설 없음)")
-            f.write(f"해설: {explanation}\n\n")
-        f.write(f"총 점수: {score} / {len(quiz_list)}\n")
-    print(f"[퀴즈 결과 저장 완료] {quiz_result_file}")
+    try:
+        output_dir.mkdir(exist_ok=True)
+        quiz_result_file = Path("summary_outputs") / f"{query}_quiz_result.txt"
+        with quiz_result_file.open("w", encoding="utf-8") as f:
+            for i, quiz in enumerate(quiz_list):
+                f.write(f"[문제 {i+1}]\n{quiz['question']}\n")
+                for j, opt in enumerate(quiz['options']):
+                    f.write(f"  {chr(65+j)}) {opt}\n")
+                f.write(f"사용자 선택: {user_answers[i]} / 정답: {quiz['answer']}\n")
+                explanation = quiz.get("explanation", "(해설 없음)")
+                f.write(f"해설: {explanation}\n\n")
+            f.write(f"총 점수: {score} / {len(quiz_list)}\n")
+        print(f"[퀴즈 결과 저장 완료] {quiz_result_file}")
+    except Exception as e:
+        print(f"퀴즈 결과 저장 중 오류 발생: {e}")
 
 # 메인 실행
 if __name__ == "__main__":
